@@ -340,6 +340,29 @@ std::string MEIOutput::Export()
     }
 }
 
+std::string MEIOutput::ExportScoreDef()
+{
+    try {
+        pugi::xml_document meiDoc;
+        std::ostringstream streamStringOutput;
+
+        pugi::xml_node decl = meiDoc.prepend_child(pugi::node_declaration);
+        decl.append_attribute("version") = "1.0";
+        decl.append_attribute("encoding") = "UTF-8";
+
+        m_currentNode = meiDoc.root();
+        m_nodeStack.push_back(m_currentNode);
+        m_doc->GetFirstScoreDef()->SaveObject(this);
+        return this->ToJson(meiDoc).json();
+        // meiDoc.save(streamStringOutput);
+        // return streamStringOutput.str();
+    }
+    catch (char *str) {
+        LogError("%s", str);
+        return "";
+    }
+}
+
 bool MEIOutput::WriteObject(Object *object)
 {
     if (this->IsScoreBasedMEI() && this->HasFilter()) {
@@ -3557,6 +3580,68 @@ std::string MEIOutput::DocTypeToStr(DocType type)
     }
 
     return value;
+}
+
+jsonxx::Object MEIOutput::ToJson(const pugi::xml_document &doc)
+{
+    std::function<jsonxx::Object(pugi::xml_node)> nodeToJson = [&](pugi::xml_node node) -> jsonxx::Object {
+        jsonxx::Object jsonNode;
+
+        jsonNode << "id" << (node.attribute("xml:id") ? node.attribute("xml:id").value() : "");
+
+        if (node.type() == pugi::node_pcdata) {
+            jsonNode << "text" << node.value();
+            jsonNode << "isLeaf" << true;
+            jsonNode << "element" << "text";
+        }
+        else {
+            jsonNode << "element" << std::string(node.name());
+
+            // Attributes
+            jsonxx::Object attributes;
+            for (auto attr : node.attributes()) {
+                // Skip xml:id and id as they are captured separately
+                if (std::string(attr.name()) != "xml:id") {
+                    attributes << attr.name() << attr.value();
+                }
+            }
+            if (!attributes.empty()) {
+                jsonNode << "attributes" << attributes;
+            }
+        }
+
+        // Children elements
+        jsonxx::Array childrenArray;
+        for (pugi::xml_node child : node.children()) {
+            if (child.type() == pugi::node_element || child.type() == pugi::node_pcdata) {
+                childrenArray << nodeToJson(child);
+            }
+        }
+
+        if (!childrenArray.empty()) {
+            jsonNode << "children" << childrenArray;
+        }
+        else {
+            jsonNode << "isLeaf" << true;
+        }
+
+        return jsonNode;
+    };
+
+    // Find first element node in the document
+    pugi::xml_node rootNode;
+    for (pugi::xml_node node = doc.first_child(); node; node = node.next_sibling()) {
+        if (node.type() == pugi::node_element) {
+            rootNode = node;
+            break;
+        }
+    }
+
+    if (!rootNode) {
+        return jsonxx::Object(); // empty
+    }
+
+    return nodeToJson(rootNode);
 }
 
 //----------------------------------------------------------------------------

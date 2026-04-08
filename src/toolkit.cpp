@@ -905,6 +905,9 @@ bool Toolkit::LoadData(const std::string &data, bool resetLogBuffer)
     delete input;
     this->SetViewAndEditor();
 
+    MEIOutput outtput(&m_doc);
+    LogInfo("%s", outtput.ExportScoreDef().c_str());
+
     return true;
 }
 

@@ -277,6 +277,11 @@ public:
      */
     void SetRemoveIds(bool removeIds) { m_removeIds = removeIds; }
 
+    /**
+     * Export the doc scoreDef.
+     */
+    std::string ExportScoreDef();
+
 private:
     /**
      * Reset
@@ -574,6 +579,8 @@ private:
     std::string IDToMeiStr(Object *element);
     std::string DocTypeToStr(DocType type);
     ///@}
+
+    jsonxx::Object ToJson(const pugi::xml_document &doc);
 
 public:
     //

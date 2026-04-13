@@ -340,29 +340,6 @@ std::string MEIOutput::Export()
     }
 }
 
-std::string MEIOutput::ExportScoreDef()
-{
-    try {
-        pugi::xml_document meiDoc;
-        std::ostringstream streamStringOutput;
-
-        pugi::xml_node decl = meiDoc.prepend_child(pugi::node_declaration);
-        decl.append_attribute("version") = "1.0";
-        decl.append_attribute("encoding") = "UTF-8";
-
-        m_currentNode = meiDoc.root();
-        m_nodeStack.push_back(m_currentNode);
-        m_doc->GetFirstScoreDef()->SaveObject(this);
-        return this->ToJson(meiDoc).json();
-        // meiDoc.save(streamStringOutput);
-        // return streamStringOutput.str();
-    }
-    catch (char *str) {
-        LogError("%s", str);
-        return "";
-    }
-}
-
 bool MEIOutput::WriteObject(Object *object)
 {
     if (this->IsScoreBasedMEI() && this->HasFilter()) {
@@ -3582,12 +3559,37 @@ std::string MEIOutput::DocTypeToStr(DocType type)
     return value;
 }
 
-jsonxx::Object MEIOutput::ToJson(const pugi::xml_document &doc)
+//----------------------------------------------------------------------------
+// MEIOutputExtended
+//----------------------------------------------------------------------------
+
+MEIOutputExtended::MEIOutputExtended(Doc *doc) : MEIOutput(doc) {}
+
+jsonxx::Object MEIOutputExtended::ExportScoreDef()
+{
+    try {
+        pugi::xml_document meiDoc;
+        std::ostringstream streamStringOutput;
+
+        m_currentNode = meiDoc.root();
+        m_nodeStack.push_back(m_currentNode);
+        m_doc->GetFirstScoreDef()->SaveObject(this);
+
+        return ToJson(meiDoc);
+    }
+    catch (char *str) {
+        LogError("%s", str);
+        return jsonxx::Object();
+    }
+}
+
+jsonxx::Object MEIOutputExtended::ToJson(const pugi::xml_document &doc)
 {
     std::function<jsonxx::Object(pugi::xml_node)> nodeToJson = [&](pugi::xml_node node) -> jsonxx::Object {
         jsonxx::Object jsonNode;
 
-        jsonNode << "id" << (node.attribute("xml:id") ? node.attribute("xml:id").value() : "");
+        // Id is mandatory - including for text nodes
+        jsonNode << "id" << (node.attribute("xml:id") ? node.attribute("xml:id").value() : Object().GetID());
 
         if (node.type() == pugi::node_pcdata) {
             jsonNode << "text" << node.value();
@@ -9182,6 +9184,64 @@ bool MEIInput::ReadFacsimile(Doc *doc, pugi::xml_node facsimile)
     }
     doc->SetFacsimile(vrvFacsimile);
     return true;
+}
+
+//----------------------------------------------------------------------------
+// MEIInputExtended
+//----------------------------------------------------------------------------
+
+MEIInputExtended::MEIInputExtended(Doc *doc) : MEIInput(doc) {}
+
+pugi::xml_document MEIInputExtended::FromJson(const jsonxx::Object &json)
+{
+    pugi::xml_document doc;
+
+    std::function<void(const jsonxx::Object &, pugi::xml_node &)> jsonToNode
+        = [&](const jsonxx::Object &jsonNode, pugi::xml_node &parent) {
+              std::string elementName = jsonNode.get<std::string>("element");
+
+              // Special case for text nodes
+              if (elementName == "text") {
+                  pugi::xml_node textNode = parent.append_child(pugi::node_pcdata);
+                  if (jsonNode.has<jsonxx::String>("text")) {
+                      textNode.set_value(jsonNode.get<std::string>("text").c_str());
+                  }
+                  return;
+              }
+
+              // Regular element node
+              pugi::xml_node xmlNode = parent.append_child(elementName.c_str());
+
+              // Convert xml:id from top-level "id"
+              if (jsonNode.has<jsonxx::String>("id")) {
+                  xmlNode.append_attribute("xml:id") = jsonNode.get<std::string>("id").c_str();
+              }
+
+              // Convert attributes
+              if (jsonNode.has<jsonxx::Object>("attributes")) {
+                  jsonxx::Object attrs = jsonNode.get<jsonxx::Object>("attributes");
+
+                  for (auto it = attrs.kv_map().begin(); it != attrs.kv_map().end(); ++it) {
+                      xmlNode.append_attribute(it->first.c_str()) = it->second;
+                  }
+              }
+
+              // Convert children
+              if (jsonNode.has<jsonxx::Array>("children")) {
+                  jsonxx::Array children = jsonNode.get<jsonxx::Array>("children");
+
+                  for (int i = 0; i < (int)children.size(); ++i) {
+                      jsonToNode(children.get<jsonxx::Object>(i), xmlNode);
+                  }
+              }
+          };
+
+    if (json.empty()) {
+        return doc;
+    }
+
+    jsonToNode(json, doc);
+    return doc;
 }
 
 } // namespace vrv

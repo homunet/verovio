@@ -91,7 +91,7 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
 
     std::string action = json.get<jsonxx::String>("action");
 
-    if (action != "context") {
+    if (action != "context" && action != "properties") {
         m_doc->SetFocus();
     }
 
@@ -198,6 +198,17 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
         }
         LogWarning("Could not parse the insert action");
     }
+    else if (action == "properties") {
+        std::string scoreDef;
+        if (this->ParsePropertiesAction(json.get<jsonxx::Object>("param"), scoreDef)) {
+            if (scoreDef.empty()) {
+                return this->GetScoreDef();
+            }
+            else {
+                return this->SetScoreDef(scoreDef);
+            }
+        }
+    }
     else if (action == "set") {
         std::string elementId, attribute, value;
         if (this->ParseSetAction(json.get<jsonxx::Object>("param"), elementId, attribute, value)) {
@@ -280,6 +291,16 @@ bool EditorToolkitShared::ParseKeyDownAction(
     }
     if (param.has<jsonxx::Boolean>("ctrlKey")) {
         ctrlKey = param.get<jsonxx::Boolean>("ctrlKey");
+    }
+    return true;
+}
+
+bool EditorToolkitShared::ParsePropertiesAction(jsonxx::Object param, std::string &scoreDef)
+{
+    scoreDef = "";
+    if (param.has<jsonxx::String>("scoreDef")) {
+        scoreDef = param.get<jsonxx::String>("scoreDef");
+        return true;
     }
     return true;
 }
@@ -846,6 +867,22 @@ ArrayOfConstObjects EditorToolkitShared::GetScoreBasedChildrenFor(const Object *
         return ArrayOfConstObjects();
     }
     return editorTreeObject->GetChildObjects();
+}
+
+bool EditorToolkitShared::GetScoreDef()
+{
+    m_editInfo.reset();
+
+    MEIOutputExtended output(m_doc);
+
+    m_editInfo = output.ExportScoreDef();
+
+    return true;
+}
+
+bool EditorToolkitShared::SetScoreDef(const std::string scoreDef)
+{
+    return true;
 }
 
 //----------------------------------------------------------------------------

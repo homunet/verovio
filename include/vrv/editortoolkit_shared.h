@@ -53,6 +53,7 @@ protected:
     bool ParseKeyDownAction(jsonxx::Object param, std::string &elementid, int &key, bool &shiftKey, bool &ctrlKey);
     bool ParseInsertAction(
         jsonxx::Object param, std::string &elementName, std::string &elementId, std::string &insertMode);
+    bool ParsePropertiesAction(jsonxx::Object param, std::string &scoreDef);
     bool ParseSetAction(jsonxx::Object param, std::string &elementId, std::string &attribute, std::string &value);
     ///@}
 
@@ -80,6 +81,9 @@ protected:
     bool ContextForElement(std::string &elementId);
     bool ContextForScores(bool editInfo);
     bool ContextForSections(bool editInfo);
+
+    bool GetScoreDef();
+    bool SetScoreDef(const std::string scoreDef);
 
     Object *GetChainedElement(std::string &elementId);
 

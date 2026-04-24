@@ -8760,9 +8760,9 @@ void MEIInput::NormalizeAttributes(pugi::xml_node &xmlElement)
         std::string value = elem.value();
 
         size_t pos = value.find_first_not_of(' ');
-        if (pos != std::string::npos) value = value.substr(pos);
+        if (pos != std::string::npos) value.erase(0, pos);
         pos = value.find_last_not_of(' ');
-        if (pos != std::string::npos) value = value.substr(0, pos + 1);
+        if (pos != std::string::npos) value.resize(pos + 1);
 
         elem.set_value(value.c_str());
     }

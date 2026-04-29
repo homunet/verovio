@@ -51,9 +51,11 @@ protected:
     bool InsertAfter(const std::string &elementId, const std::string &elementName);
     Object *GetElement(const std::string &elementId);
     Object *PrepareInsertion(Object *parent, const std::string &elementName);
+    Object *GetChainedElement(std::string &elementId);
 #endif
 
 protected:
+    std::string m_chainedId;
     Doc *m_doc;
     View *m_view;
     jsonxx::Object m_editInfo;

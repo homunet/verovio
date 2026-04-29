@@ -19,6 +19,8 @@ namespace vrv {
 
 #ifndef NO_EDIT_SUPPORT
 
+#define CHAINED_ID "[chained-id]"
+
 bool EditorToolkit::AppendChild(const std::string &elementId, const std::string &elementName)
 {
     Object *element = this->GetElement(elementId);
@@ -101,8 +103,24 @@ Object *EditorToolkit::PrepareInsertion(Object *parent, const std::string &eleme
     if (!childElement) {
         LogError("Creating a '%s' object failed", elementName.c_str());
     }
+    else {
+        m_chainedId = childElement->GetID();
+    }
 
     return childElement;
+}
+
+
+Object *EditorToolkit::GetChainedElement(std::string &elementId)
+{
+    if (elementId == CHAINED_ID) {
+        elementId = m_chainedId;
+    }
+    else {
+        m_chainedId = elementId;
+    }
+
+    return this->GetElement(elementId);
 }
 
 #endif /* NO_EDIT_SUPPORT */

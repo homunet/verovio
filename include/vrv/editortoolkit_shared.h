@@ -38,7 +38,6 @@ public:
         return ParseEditorAction(json_editorAction, false);
     }
     bool ParseEditorAction(const std::string &json_editorAction, bool commitOnly = false);
-    std::string EditInfo() override;
 
 protected:
 #ifndef NO_EDIT_SUPPORT
@@ -53,6 +52,8 @@ protected:
     bool ParseKeyDownAction(jsonxx::Object param, std::string &elementid, int &key, bool &shiftKey, bool &ctrlKey);
     bool ParseInsertAction(
         jsonxx::Object param, std::string &elementName, std::string &elementId, std::string &insertMode);
+    bool ParseInsertControlAction(
+        jsonxx::Object param, std::string &elementName, std::string &startId, std::string &endId);
     bool ParsePropertiesAction(jsonxx::Object param, std::string &scoreDef);
     bool ParseSetAction(jsonxx::Object param, std::string &elementId, std::string &attribute, std::string &value);
     ///@}
@@ -73,6 +74,7 @@ protected:
     ///@{
     bool Delete(std::string &elementId);
     bool Drag(std::string &elementId, int x, int y);
+    bool InsertControl(const std::string &elementName, const std::string startId, const std::string endId);
     bool KeyDown(std::string &elementId, int key, bool shiftKey, bool ctrlKey);
     bool Set(std::string &elementId, std::string const &attribute, std::string const &value);
     ///@}
@@ -85,8 +87,6 @@ protected:
     bool GetScoreDef();
     bool SetScoreDef(const std::string scoreDef);
 
-    Object *GetChainedElement(std::string &elementId);
-
     void ContextForObject(const Object *object, jsonxx::Object &element, bool recursive = false);
     void ContextForObjects(const ArrayOfConstObjects &objects, jsonxx::Array &siblings);
     void ContextForReferences(const ListOfObjectAttNamePairs &objects, jsonxx::Array &links);
@@ -96,7 +96,6 @@ protected:
 public:
     //
 protected:
-    std::string m_chainedId;
 
     bool m_undoPrepared;
     std::deque<std::string> m_undoStack;

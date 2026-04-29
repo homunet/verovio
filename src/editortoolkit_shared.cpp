@@ -46,8 +46,6 @@
 
 //--------------------------------------------------------------------------------
 
-#define CHAINED_ID "[chained-id]"
-
 #define UNDO_MEMORY_LIMIT (256 * 1024 * 1024) // 256 MB
 
 namespace vrv {
@@ -67,11 +65,6 @@ EditorToolkitShared::~EditorToolkitShared()
 #ifndef NO_EDIT_SUPPORT
     this->ClearContext();
 #endif
-}
-
-std::string EditorToolkitShared::EditInfo()
-{
-    return m_editInfo.json();
 }
 
 bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction, bool commitOnly)
@@ -171,21 +164,11 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
         }
         LogWarning("Could not parse the drag action");
     }
-    else if (action == "keyDown") {
-        std::string elementId;
-        int key;
-        bool shiftKey, ctrlKey;
-        if (this->ParseKeyDownAction(json.get<jsonxx::Object>("param"), elementId, key, shiftKey, ctrlKey)) {
-            this->PrepareUndo();
-            return (this->KeyDown(elementId, key, shiftKey, ctrlKey));
-        }
-        LogWarning("Could not parse the keyDown action");
-    }
     else if (action == "insert") {
         std::string elementName, elementId, insertMode;
         if (this->ParseInsertAction(json.get<jsonxx::Object>("param"), elementName, elementId, insertMode)) {
             this->PrepareUndo();
-            LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
+            //LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
             if (insertMode == "appendChild") {
                 return (this->AppendChild(elementId, elementName));
             }
@@ -197,6 +180,25 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
             }
         }
         LogWarning("Could not parse the insert action");
+    }
+    else if (action == "insertControl") {
+        std::string elementName, startId, endId;
+        if (this->ParseInsertControlAction(json.get<jsonxx::Object>("param"), elementName, startId, endId)) {
+            this->PrepareUndo();
+            //LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
+            return (this->InsertControl(elementName, startId, endId));
+        }
+        LogWarning("Could not parse the insertControl action");
+    }
+    else if (action == "keyDown") {
+        std::string elementId;
+        int key;
+        bool shiftKey, ctrlKey;
+        if (this->ParseKeyDownAction(json.get<jsonxx::Object>("param"), elementId, key, shiftKey, ctrlKey)) {
+            this->PrepareUndo();
+            return (this->KeyDown(elementId, key, shiftKey, ctrlKey));
+        }
+        LogWarning("Could not parse the keyDown action");
     }
     else if (action == "properties") {
         std::string scoreDef;
@@ -271,6 +273,18 @@ bool EditorToolkitShared::ParseInsertAction(
     elementId = param.get<jsonxx::String>("elementId");
     if (!param.has<jsonxx::String>("insertMode")) return false;
     insertMode = param.get<jsonxx::String>("insertMode");
+    return true;
+}
+
+bool EditorToolkitShared::ParseInsertControlAction(
+    jsonxx::Object param, std::string &elementName, std::string &startId, std::string &endId)
+{
+    if (!param.has<jsonxx::String>("elementName")) return false;
+    elementName = param.get<jsonxx::String>("elementName");
+    if (!param.has<jsonxx::String>("startId")) return false;
+    startId = param.get<jsonxx::String>("startId");
+    if (!param.has<jsonxx::String>("insertMode")) return true;
+    endId = param.get<jsonxx::String>("endId");
     return true;
 }
 
@@ -445,6 +459,31 @@ bool EditorToolkitShared::Drag(std::string &elementId, int x, int y)
     return false;
 }
 
+bool EditorToolkitShared::InsertControl(const std::string &elementName, const std::string startId, const std::string endId)
+{
+    Object *start = this->GetElement(startId);
+    if (!start) return false;
+    
+    Measure *measure = vrv_cast<Measure*>(start->GetFirstAncestor(MEASURE));
+    if (!measure) return false;
+    
+    Object *childElement = this->PrepareInsertion(measure, elementName);
+    if (!childElement) return false;
+
+    if (!measure->AddChild(childElement)) {
+        delete childElement;
+        return false;
+    }
+    
+    TimePointInterface *timePointInterface = childElement->GetTimePointInterface();
+    if (timePointInterface) timePointInterface->SetStartid(startId);
+
+    TimeSpanningInterface *timeSpanningInterface = childElement->GetTimeSpanningInterface();
+    if (timeSpanningInterface && !endId.empty()) timeSpanningInterface->SetEndid(endId);
+    
+    return true;
+}
+
 bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey, bool ctrlKey)
 {
     Object *element = this->GetChainedElement(elementId);
@@ -469,6 +508,7 @@ bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey
 bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribute, std::string const &value)
 {
     Object *element = this->GetChainedElement(elementId);
+    LogWarning("%s", m_chainedId.c_str());
     if (!element) return false;
 
     bool success = false;
@@ -546,18 +586,6 @@ bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribu
     }
 
     return success;
-}
-
-Object *EditorToolkitShared::GetChainedElement(std::string &elementId)
-{
-    if (elementId == CHAINED_ID) {
-        elementId = m_chainedId;
-    }
-    else {
-        m_chainedId = elementId;
-    }
-
-    return this->GetElement(elementId);
 }
 
 bool EditorToolkitShared::ContextForScores(bool editInfo)

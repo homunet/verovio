@@ -523,41 +523,75 @@ bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey
     return false;
 }
 
-
 bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
 {
     m_chainedId = "";
-    Object *element = this->GetElement(elementId);
+    this->SetEditInfo();
+
+    const Object *element = this->GetElement(elementId);
     if (!element) return false;
-    
-    LayerElement *layerElement = dynamic_cast<LayerElement *>(element);
+
+    const LayerElement *layerElement = dynamic_cast<const LayerElement *>(element);
     if (!layerElement) return true;
-    
+
+    const Layer *layer = vrv_cast<const Layer *>(layerElement->GetFirstAncestor(LAYER));
+    if (!layer) return true;
+
+    const LayerElement *result = layerElement;
+
+    while (result) {
+
+        // keycode left
+        result = (direction == 39) ? layer->GetNextInLayer(result) : layer->GetPreviousInLayer(result);
+
+        if (!result || (layerElement->GetAlignment() == result->GetAlignment())) continue;
+
+        if (result->Is({ CHORD, MREST, NOTE, REST })) break;
+    }
+
+    if (result) {
+        if (result->Is(NOTE)) {
+            const Note *note = vrv_cast<const Note *>(result);
+            assert(note);
+            if (note->IsChordTone()) result = note->IsChordTone();
+        }
+        if (result->Is(CHORD)) {
+            const Chord *chord = vrv_cast<const Chord *>(result);
+            assert(chord);
+            result = chord->GetTopNote();
+        }
+    }
+
+    if (result) m_chainedId = result->GetID();
+
+    LogWarning("%s", m_chainedId.c_str());
+    this->SetEditInfo();
     return true;
 }
 
 /*
-bool EditorToolkitShared::NavigateLayer(LayerElement *element, Layer *layer, const int &direction, const std::vector<ClassId> &classIds)
+bool EditorToolkitShared::NavigateLayer(LayerElement *element, Layer *layer, const int &direction, const
+std::vector<ClassId> &classIds)
 {
     assert(element);
     assert(layer);
-    
+
     ClassIdsComparison comparison(classIds);
     Staff *staff = dynamic_cast<Staff *>(layer->GetFirstAncestor(STAFF));
     if (!staff) return false;
     //Object *layerChild = Object *GetLastAncestorNot(const ClassId classId,
-    
-    
+
+
     layer->ResetList();
     LayerElement *result = NULL;
-    
+
     // keycode left
     if (direction == 37) {
         result = dynamic_cast<LayerElement *>(layer->GetListNext(element, comparison));
     }
     // up
     else if (direction == 38) {
-        
+
     }
     // right
     else if (direction == 39) {
@@ -565,18 +599,18 @@ bool EditorToolkitShared::NavigateLayer(LayerElement *element, Layer *layer, con
     }
     // down
     else if (direction == 40) {
-        
+
     }
-    
+
     if (result) {
         m_chainedId = result->GetID();
         return true;
     }
-    
+
     return false;
 }
 */
- 
+
 bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribute, std::string const &value)
 {
     Object *element = this->GetChainedElement(elementId);

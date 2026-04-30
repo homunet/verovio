@@ -508,7 +508,6 @@ bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey
 bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribute, std::string const &value)
 {
     Object *element = this->GetChainedElement(elementId);
-    LogWarning("%s", m_chainedId.c_str());
     if (!element) return false;
 
     bool success = false;

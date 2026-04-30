@@ -21,9 +21,9 @@ namespace vrv {
 
 #define CHAINED_ID "[chained-id]"
 
-bool EditorToolkit::AppendChild(const std::string &elementId, const std::string &elementName)
+bool EditorToolkit::AppendChild(std::string &elementId, const std::string &elementName)
 {
-    Object *element = this->GetElement(elementId);
+    Object *element = this->GetChainedElement(elementId);
     if (!element) return false;
 
     Object *childElement = this->PrepareInsertion(element, elementName);
@@ -37,9 +37,9 @@ bool EditorToolkit::AppendChild(const std::string &elementId, const std::string 
     return true;
 }
 
-bool EditorToolkit::InsertBefore(const std::string &elementId, const std::string &elementName)
+bool EditorToolkit::InsertBefore(std::string &elementId, const std::string &elementName)
 {
-    Object *element = this->GetElement(elementId);
+    Object *element = this->GetChainedElement(elementId);
     if (!element) return false;
 
     Object *parent = element->GetParent();
@@ -53,9 +53,9 @@ bool EditorToolkit::InsertBefore(const std::string &elementId, const std::string
     return true;
 }
 
-bool EditorToolkit::InsertAfter(const std::string &elementId, const std::string &elementName)
+bool EditorToolkit::InsertAfter(std::string &elementId, const std::string &elementName)
 {
-    Object *element = this->GetElement(elementId);
+    Object *element = this->GetChainedElement(elementId);
     if (!element) return false;
 
     Object *parent = element->GetParent();

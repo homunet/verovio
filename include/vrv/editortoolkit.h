@@ -46,9 +46,9 @@ public:
 
 #ifndef NO_EDIT_SUPPORT
 protected:
-    bool AppendChild(const std::string &elementId, const std::string &elementName);
-    bool InsertBefore(const std::string &elementId, const std::string &elementName);
-    bool InsertAfter(const std::string &elementId, const std::string &elementName);
+    bool AppendChild(std::string &elementId, const std::string &elementName);
+    bool InsertBefore(std::string &elementId, const std::string &elementName);
+    bool InsertAfter(std::string &elementId, const std::string &elementName);
     Object *GetElement(const std::string &elementId);
     Object *PrepareInsertion(Object *parent, const std::string &elementName);
     Object *GetChainedElement(std::string &elementId);

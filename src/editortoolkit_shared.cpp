@@ -200,6 +200,14 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
         }
         LogWarning("Could not parse the keyDown action");
     }
+    else if (action == "navigate") {
+        std::string elementId;
+        int direction;
+        if (this->ParseNavigate(json.get<jsonxx::Object>("param"), elementId, direction)) {
+            return this->Navigate(elementId, direction);
+        }
+        LogWarning("Could not parse the navigate action");
+    }
     else if (action == "properties") {
         std::string scoreDef;
         if (this->ParsePropertiesAction(json.get<jsonxx::Object>("param"), scoreDef)) {
@@ -306,6 +314,15 @@ bool EditorToolkitShared::ParseKeyDownAction(
     if (param.has<jsonxx::Boolean>("ctrlKey")) {
         ctrlKey = param.get<jsonxx::Boolean>("ctrlKey");
     }
+    return true;
+}
+
+bool EditorToolkitShared::ParseNavigate(jsonxx::Object param, std::string &elementId, int &direction)
+{
+    if (!param.has<jsonxx::String>("elementId")) return false;
+    elementId = param.get<jsonxx::String>("elementId");
+    if (!param.has<jsonxx::Number>("direction")) return false;
+    direction = param.get<jsonxx::Number>("direction");
     return true;
 }
 
@@ -506,6 +523,60 @@ bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey
     return false;
 }
 
+
+bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
+{
+    m_chainedId = "";
+    Object *element = this->GetElement(elementId);
+    if (!element) return false;
+    
+    LayerElement *layerElement = dynamic_cast<LayerElement *>(element);
+    if (!layerElement) return true;
+    
+    return true;
+}
+
+/*
+bool EditorToolkitShared::NavigateLayer(LayerElement *element, Layer *layer, const int &direction, const std::vector<ClassId> &classIds)
+{
+    assert(element);
+    assert(layer);
+    
+    ClassIdsComparison comparison(classIds);
+    Staff *staff = dynamic_cast<Staff *>(layer->GetFirstAncestor(STAFF));
+    if (!staff) return false;
+    //Object *layerChild = Object *GetLastAncestorNot(const ClassId classId,
+    
+    
+    layer->ResetList();
+    LayerElement *result = NULL;
+    
+    // keycode left
+    if (direction == 37) {
+        result = dynamic_cast<LayerElement *>(layer->GetListNext(element, comparison));
+    }
+    // up
+    else if (direction == 38) {
+        
+    }
+    // right
+    else if (direction == 39) {
+        result = dynamic_cast<LayerElement *>(layer->GetListPrevious((Object *)element, comparison));
+    }
+    // down
+    else if (direction == 40) {
+        
+    }
+    
+    if (result) {
+        m_chainedId = result->GetID();
+        return true;
+    }
+    
+    return false;
+}
+*/
+ 
 bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribute, std::string const &value)
 {
     Object *element = this->GetChainedElement(elementId);

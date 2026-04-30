@@ -110,7 +110,6 @@ Object *EditorToolkit::PrepareInsertion(Object *parent, const std::string &eleme
     return childElement;
 }
 
-
 Object *EditorToolkit::GetChainedElement(std::string &elementId)
 {
     if (elementId == CHAINED_ID) {

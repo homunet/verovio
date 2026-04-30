@@ -96,7 +96,6 @@ protected:
 public:
     //
 protected:
-
     bool m_undoPrepared;
     std::deque<std::string> m_undoStack;
     std::deque<std::string> m_redoStack;

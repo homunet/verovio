@@ -168,7 +168,7 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
         std::string elementName, elementId, insertMode;
         if (this->ParseInsertAction(json.get<jsonxx::Object>("param"), elementName, elementId, insertMode)) {
             this->PrepareUndo();
-            //LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
+            // LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
             if (insertMode == "appendChild") {
                 return (this->AppendChild(elementId, elementName));
             }
@@ -185,7 +185,7 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
         std::string elementName, startId, endId;
         if (this->ParseInsertControlAction(json.get<jsonxx::Object>("param"), elementName, startId, endId)) {
             this->PrepareUndo();
-            //LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
+            // LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
             return (this->InsertControl(elementName, startId, endId));
         }
         LogWarning("Could not parse the insertControl action");
@@ -459,14 +459,15 @@ bool EditorToolkitShared::Drag(std::string &elementId, int x, int y)
     return false;
 }
 
-bool EditorToolkitShared::InsertControl(const std::string &elementName, const std::string startId, const std::string endId)
+bool EditorToolkitShared::InsertControl(
+    const std::string &elementName, const std::string startId, const std::string endId)
 {
     Object *start = this->GetElement(startId);
     if (!start) return false;
-    
-    Measure *measure = vrv_cast<Measure*>(start->GetFirstAncestor(MEASURE));
+
+    Measure *measure = vrv_cast<Measure *>(start->GetFirstAncestor(MEASURE));
     if (!measure) return false;
-    
+
     Object *childElement = this->PrepareInsertion(measure, elementName);
     if (!childElement) return false;
 
@@ -474,13 +475,13 @@ bool EditorToolkitShared::InsertControl(const std::string &elementName, const st
         delete childElement;
         return false;
     }
-    
+
     TimePointInterface *timePointInterface = childElement->GetTimePointInterface();
     if (timePointInterface) timePointInterface->SetStartid(startId);
 
     TimeSpanningInterface *timeSpanningInterface = childElement->GetTimeSpanningInterface();
     if (timeSpanningInterface && !endId.empty()) timeSpanningInterface->SetEndid(endId);
-    
+
     return true;
 }
 

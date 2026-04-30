@@ -477,10 +477,10 @@ bool EditorToolkitShared::InsertControl(
     }
 
     TimePointInterface *timePointInterface = childElement->GetTimePointInterface();
-    if (timePointInterface) timePointInterface->SetStartid(startId);
+    if (timePointInterface) timePointInterface->SetStartid("#" + startId);
 
     TimeSpanningInterface *timeSpanningInterface = childElement->GetTimeSpanningInterface();
-    if (timeSpanningInterface && !endId.empty()) timeSpanningInterface->SetEndid(endId);
+    if (timeSpanningInterface && !endId.empty()) timeSpanningInterface->SetEndid("#" + endId);
 
     return true;
 }

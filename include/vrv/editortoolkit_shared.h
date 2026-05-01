@@ -78,7 +78,6 @@ protected:
     bool InsertControl(const std::string &elementName, const std::string startId, const std::string endId);
     bool KeyDown(std::string &elementId, int key, bool shiftKey, bool ctrlKey);
     bool Navigate(std::string &elementId, const int &direction);
-    bool NavigateLayer(LayerElement *element, Layer *layer, const int &direction, const std::vector<ClassId> &classIds);
     bool Set(std::string &elementId, std::string const &attribute, std::string const &value);
     ///@}
 

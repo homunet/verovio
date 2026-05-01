@@ -564,52 +564,9 @@ bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
 
     if (result) m_chainedId = result->GetID();
 
-    LogWarning("%s", m_chainedId.c_str());
     this->SetEditInfo();
     return true;
 }
-
-/*
-bool EditorToolkitShared::NavigateLayer(LayerElement *element, Layer *layer, const int &direction, const
-std::vector<ClassId> &classIds)
-{
-    assert(element);
-    assert(layer);
-
-    ClassIdsComparison comparison(classIds);
-    Staff *staff = dynamic_cast<Staff *>(layer->GetFirstAncestor(STAFF));
-    if (!staff) return false;
-    //Object *layerChild = Object *GetLastAncestorNot(const ClassId classId,
-
-
-    layer->ResetList();
-    LayerElement *result = NULL;
-
-    // keycode left
-    if (direction == 37) {
-        result = dynamic_cast<LayerElement *>(layer->GetListNext(element, comparison));
-    }
-    // up
-    else if (direction == 38) {
-
-    }
-    // right
-    else if (direction == 39) {
-        result = dynamic_cast<LayerElement *>(layer->GetListPrevious((Object *)element, comparison));
-    }
-    // down
-    else if (direction == 40) {
-
-    }
-
-    if (result) {
-        m_chainedId = result->GetID();
-        return true;
-    }
-
-    return false;
-}
-*/
 
 bool EditorToolkitShared::Set(std::string &elementId, std::string const &attribute, std::string const &value)
 {

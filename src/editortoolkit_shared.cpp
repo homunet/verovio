@@ -528,9 +528,9 @@ bool EditorToolkitShared::KeyDown(std::string &elementId, int key, bool shiftKey
 bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
 {
     static auto classIds = { CHORD, MREST, NOTE, REST };
-    
+
     const bool forward = (direction == 39);
-    
+
     m_chainedId = "";
     this->SetEditInfo();
 
@@ -553,7 +553,7 @@ bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
 
         if (result->Is(classIds)) break;
     }
-    
+
     if (!result) {
         ClassIdsComparison matches(classIds);
         if (forward) {
@@ -569,7 +569,7 @@ bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
                 assert(page);
                 const System *nextSystem = vrv_cast<const System *>(page->GetNext(system, SYSTEM));
                 if (!nextSystem) {
-                    const Page *nextPage = vrv_cast<const Page*>(m_doc->GetPages()->GetNext(page, PAGE));
+                    const Page *nextPage = vrv_cast<const Page *>(m_doc->GetPages()->GetNext(page, PAGE));
                     if (!nextPage) return true;
                     nextSystem = vrv_cast<const System *>(nextPage->GetFirst(SYSTEM));
                     if (!nextSystem) return true;
@@ -578,7 +578,8 @@ bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
                 if (!nextMeasure) return true;
             }
             AttNIntegerComparison staffNComparison(STAFF, staff->GetN());
-            const Staff *nextStaff = vrv_cast<const Staff *>(nextMeasure->FindDescendantByComparison(&staffNComparison));
+            const Staff *nextStaff
+                = vrv_cast<const Staff *>(nextMeasure->FindDescendantByComparison(&staffNComparison));
             if (!nextStaff) return true;
             AttNIntegerComparison layerNComparison(LAYER, layer->GetN());
             layer = vrv_cast<const Layer *>(nextStaff->FindDescendantByComparison(&layerNComparison));
@@ -608,12 +609,14 @@ bool EditorToolkitShared::Navigate(std::string &elementId, const int &direction)
                 if (!previousMeasure) return true;
             }
             AttNIntegerComparison staffNComparison(STAFF, staff->GetN());
-            const Staff *previousStaff = vrv_cast<const Staff *>(previousMeasure->FindDescendantByComparison(&staffNComparison));
+            const Staff *previousStaff
+                = vrv_cast<const Staff *>(previousMeasure->FindDescendantByComparison(&staffNComparison));
             if (!previousStaff) return true;
             AttNIntegerComparison layerNComparison(LAYER, layer->GetN());
             layer = vrv_cast<const Layer *>(previousStaff->FindDescendantByComparison(&layerNComparison));
             if (!layer) return true;
-            result = vrv_cast<const LayerElement *>(layer->FindDescendantByComparison(&matches, UNLIMITED_DEPTH, BACKWARD));
+            result = vrv_cast<const LayerElement *>(
+                layer->FindDescendantByComparison(&matches, UNLIMITED_DEPTH, BACKWARD));
         }
     }
 

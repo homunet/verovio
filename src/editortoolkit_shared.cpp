@@ -793,6 +793,8 @@ bool EditorToolkitShared::ContextForElement(std::string &elementId)
     // We cannot continue without object
     if (!object || !object->GetParent()) return false;
 
+    // Keep a pointer to the orignal object for the attributes
+    const Object *originalObject = object;
     ArrayOfConstObjects siblings;
     ArrayOfConstObjects::iterator targetIt;
 
@@ -905,7 +907,7 @@ bool EditorToolkitShared::ContextForElement(std::string &elementId)
 
     // Inlude all attributes
     ArrayOfStrAttr attributes;
-    object->GetAttributes(&attributes);
+    originalObject->GetAttributes(&attributes);
     jsonxx::Object jsonAttributes;
     for (const auto &attribute : attributes) {
         jsonAttributes << attribute.first << attribute.second;

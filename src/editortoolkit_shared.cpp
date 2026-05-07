@@ -457,8 +457,71 @@ bool EditorToolkitShared::Chain(jsonxx::Array actions)
 bool EditorToolkitShared::Delete(std::string &elementId)
 {
     Object *element = this->GetChainedElement(elementId);
+
     if (!element) return false;
-    return false;
+
+    // Find referring objects
+    SetOfConstObjects objectsToDelete, visited;
+    if (this->CollectReferringObjects(element, objectsToDelete, visited)) {
+        for (auto object : objectsToDelete) {
+            Object *toDelete = m_doc->FindDescendantByID(object->GetID());
+            if (toDelete && toDelete->GetParent()) {
+                if (toDelete == element) m_chainedId = toDelete->GetParent()->GetID();
+                toDelete->GetParent()->DeleteChild(toDelete);
+            }
+        }
+    }
+    else {
+        return false;
+    }
+
+    this->SetEditInfo();
+    return true;
+}
+
+bool EditorToolkitShared::CollectReferringObjects(
+    const Object *element, SetOfConstObjects &objectsToDelete, SetOfConstObjects &visited)
+{
+    assert(element);
+
+    if (visited.find(element) != visited.end()) return true;
+    visited.insert(element);
+
+    objectsToDelete.insert(element);
+
+    // First check all children
+    for (int i = 0; i < element->GetChildCount(); ++i) {
+        const Object *child = element->GetChild(i);
+        if (!child) continue;
+
+        if (!CollectReferringObjects(child, objectsToDelete, visited)) {
+            return false;
+        }
+    }
+
+    // Then find objects referring to this object
+    ListOfObjectAttNamePairs referringObjects;
+    FindAllReferringObjectsFunctor findAllReferringObjects(element, &referringObjects);
+    m_doc->Process(findAllReferringObjects);
+
+    for (ListOfObjectAttNamePairs::iterator it = referringObjects.begin(); it != referringObjects.end(); ++it) {
+        const Object *referringObject = it->first;
+
+        if (referringObject == NULL) continue;
+        if (referringObject == element) continue;
+
+        // Stop if the referrer is an ancestor of the element.
+        // That means deleting the referrer would delete upward.
+        if (referringObject->IsAncestorOf(element)) {
+            return false;
+        }
+
+        if (!CollectReferringObjects(referringObject, objectsToDelete, visited)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool EditorToolkitShared::Drag(std::string &elementId, int x, int y)

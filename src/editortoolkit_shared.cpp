@@ -172,7 +172,10 @@ bool EditorToolkitShared::ParseEditorAction(const std::string &json_editorAction
             this->PrepareUndo();
             // LogInfo("%s %s %s", elementName.c_str(), elementId.c_str(), insertMode.c_str());
             if (insertMode == "appendChild") {
-                return (this->AppendChild(elementId, elementName));
+                return (this->AppendChild(elementId, elementName, false));
+            }
+            else if (insertMode == "appendChildNoDuplicate") {
+                return (this->AppendChild(elementId, elementName, true));
             }
             else if (insertMode == "insertBefore") {
                 return (this->InsertBefore(elementId, elementName));
@@ -293,7 +296,7 @@ bool EditorToolkitShared::ParseInsertControlAction(
     elementName = param.get<jsonxx::String>("elementName");
     if (!param.has<jsonxx::String>("startId")) return false;
     startId = param.get<jsonxx::String>("startId");
-    if (!param.has<jsonxx::String>("insertMode")) return true;
+    if (!param.has<jsonxx::String>("endId")) return true;
     endId = param.get<jsonxx::String>("endId");
     return true;
 }

@@ -21,10 +21,20 @@ namespace vrv {
 
 #define CHAINED_ID "[chained-id]"
 
-bool EditorToolkit::AppendChild(std::string &elementId, const std::string &elementName)
+bool EditorToolkit::AppendChild(std::string &elementId, const std::string &elementName, bool noDuplicate)
 {
     Object *element = this->GetChainedElement(elementId);
     if (!element) return false;
+
+    if (noDuplicate) {
+        ClassId classId = ObjectFactory::GetInstance()->GetClassId(elementName);
+        Object *existingChildElement = element->FindDescendantByType(classId, 1);
+        if (existingChildElement) {
+            existingChildElement->Reset();
+            m_chainedId = existingChildElement->GetID();
+            return true;
+        }
+    }
 
     Object *childElement = this->PrepareInsertion(element, elementName);
     if (!childElement) return false;

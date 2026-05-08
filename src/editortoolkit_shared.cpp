@@ -461,45 +461,39 @@ bool EditorToolkitShared::Delete(std::string &elementId)
     if (!element) return false;
 
     this->Navigate(elementId, 37);
+    if (m_chainedId.empty() && element->GetParent()) m_chainedId = element->GetParent()->GetID();
 
     // Find referring objects
-    SetOfConstObjects objectsToDelete, visited;
-    if (this->CollectReferringObjects(element, objectsToDelete, visited)) {
-        for (auto object : objectsToDelete) {
-            Object *toDelete = m_doc->FindDescendantByID(object->GetID());
-            if (toDelete && toDelete->GetParent()) {
-                toDelete->GetParent()->DeleteChild(toDelete);
-            }
-        }
+    std::set<std::string> objectsToDelete;
+    SetOfConstObjects visited;
+    objectsToDelete.insert(element->GetID());
+    this->CollectReferringObjects(element, objectsToDelete, visited);
+    for (auto id : objectsToDelete) {
+        Object *toDelete = m_doc->FindDescendantByID(id);
+        if (toDelete && toDelete->GetParent()) toDelete->GetParent()->DeleteChild(toDelete);
     }
-    else {
-        return false;
-    }
-    
+
     if (!m_chainedId.empty() && !m_doc->FindDescendantByID(m_chainedId)) m_chainedId = "";
 
+    this->ClearContext();
     this->SetEditInfo();
     return true;
 }
 
-bool EditorToolkitShared::CollectReferringObjects(
-    const Object *element, SetOfConstObjects &objectsToDelete, SetOfConstObjects &visited)
+void EditorToolkitShared::CollectReferringObjects(
+    const Object *element, std::set<std::string> &objectsToDelete, SetOfConstObjects &visited)
 {
     assert(element);
 
-    if (visited.find(element) != visited.end()) return true;
+    if (visited.find(element) != visited.end()) return;
     visited.insert(element);
-
-    objectsToDelete.insert(element);
 
     // First check all children
     for (int i = 0; i < element->GetChildCount(); ++i) {
         const Object *child = element->GetChild(i);
         if (!child) continue;
 
-        if (!CollectReferringObjects(child, objectsToDelete, visited)) {
-            return false;
-        }
+        CollectReferringObjects(child, objectsToDelete, visited);
     }
 
     // Then find objects referring to this object
@@ -513,18 +507,10 @@ bool EditorToolkitShared::CollectReferringObjects(
         if (referringObject == NULL) continue;
         if (referringObject == element) continue;
 
-        // Stop if the referrer is an ancestor of the element.
-        // That means deleting the referrer would delete upward.
-        if (referringObject->IsAncestorOf(element)) {
-            return false;
-        }
+        objectsToDelete.insert(referringObject->GetID());
 
-        if (!CollectReferringObjects(referringObject, objectsToDelete, visited)) {
-            return false;
-        }
+        CollectReferringObjects(referringObject, objectsToDelete, visited);
     }
-
-    return true;
 }
 
 bool EditorToolkitShared::Drag(std::string &elementId, int x, int y)

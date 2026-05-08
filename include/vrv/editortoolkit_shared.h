@@ -95,8 +95,8 @@ protected:
 
     ArrayOfConstObjects GetScoreBasedChildrenFor(const Object *object);
 
-    bool CollectReferringObjects(
-        const Object *element, std::set<const Object *> &objectsToDelete, std::set<const Object *> &visited);
+    void CollectReferringObjects(
+        const Object *element, std::set<std::string> &toDelete, std::set<const Object *> &visited);
 
 public:
     //

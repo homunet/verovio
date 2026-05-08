@@ -460,13 +460,14 @@ bool EditorToolkitShared::Delete(std::string &elementId)
 
     if (!element) return false;
 
+    this->Navigate(elementId, 37);
+
     // Find referring objects
     SetOfConstObjects objectsToDelete, visited;
     if (this->CollectReferringObjects(element, objectsToDelete, visited)) {
         for (auto object : objectsToDelete) {
             Object *toDelete = m_doc->FindDescendantByID(object->GetID());
             if (toDelete && toDelete->GetParent()) {
-                if (toDelete == element) m_chainedId = toDelete->GetParent()->GetID();
                 toDelete->GetParent()->DeleteChild(toDelete);
             }
         }
@@ -474,6 +475,8 @@ bool EditorToolkitShared::Delete(std::string &elementId)
     else {
         return false;
     }
+    
+    if (!m_chainedId.empty() && !m_doc->FindDescendantByID(m_chainedId)) m_chainedId = "";
 
     this->SetEditInfo();
     return true;

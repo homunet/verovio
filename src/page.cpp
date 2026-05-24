@@ -693,6 +693,27 @@ void Page::RedistributeMeasureAlignments(Measure *m, int spacing, int targetWidt
     const int naturalRightX = rightAlign->GetXRel();
     const int naturalRightBarX = rightBar->GetXRel();
 
+    // Natural left padding: the smallest positive offset between the left
+    // barline and any time-bearing inner alignment. Verovio's natural layout
+    // never places the first note exactly on the barline — it leaves a few
+    // units of breathing room (typically ~180 units for a downbeat note).
+    // Without this, pure time-based mapping would put time=0 onsets right on
+    // top of the barline. We preserve the natural pad as an absolute offset
+    // (don't scale it), because the breathing room doesn't visually scale
+    // with measure width.
+    int naturalLeftPad = 0;
+    for (const Object *child : aligner.GetChildren()) {
+        const Alignment *a = vrv_cast<const Alignment *>(child);
+        if (!a) continue;
+        const AlignmentType type = a->GetType();
+        if (type <= ALIGNMENT_MEASURE_LEFT_BARLINE) continue;
+        if (type >= ALIGNMENT_MEASURE_RIGHT_BARLINE) continue;
+        const int offset = a->GetXRel() - leftAnchorX;
+        if (offset > 0 && (naturalLeftPad == 0 || offset < naturalLeftPad)) {
+            naturalLeftPad = offset;
+        }
+    }
+
     // The new gap between rightBarLine and rightEnd (typically a few units for
     // post-barline scoreDef/caution elements). Preserved across all strategies.
     const int rightTailShift = naturalRightX - naturalRightBarX;
@@ -737,8 +758,14 @@ void Page::RedistributeMeasureAlignments(Measure *m, int spacing, int targetWidt
         else if (spacing == UNIFORM_SPACING_time) {
             if (maxTime > 0.0) {
                 const double t = a->GetTime().ToDouble();
-                const int newX = leftAnchorX + (int)std::lround((t / maxTime) * targetInnerWidth);
-                a->SetXRel(newX);
+                // Reserve naturalLeftPad units of breathing room after the left
+                // barline; distribute time positions across the remainder.
+                const int usableWidth = targetInnerWidth - naturalLeftPad;
+                if (usableWidth > 0) {
+                    const int newX = leftAnchorX + naturalLeftPad
+                        + (int)std::lround((t / maxTime) * usableWidth);
+                    a->SetXRel(newX);
+                }
             }
         }
         // else UNIFORM_SPACING_leftAlign: leave inner alignment at its natural position.

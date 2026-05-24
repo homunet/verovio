@@ -59,6 +59,12 @@ class OptionGrp;
 
 enum option_BREAKS { BREAKS_none = 0, BREAKS_auto, BREAKS_line, BREAKS_smart, BREAKS_encoded };
 
+enum option_UNIFORM_SPACING {
+    UNIFORM_SPACING_leftAlign = 0, // content keeps natural positions; only the right barline is moved
+    UNIFORM_SPACING_scaled,        // per-measure proportional scaling (preserves Verovio collision avoidance)
+    UNIFORM_SPACING_time           // pure time-based distribution (no collision recovery)
+};
+
 enum option_CONDENSE { CONDENSE_none = 0, CONDENSE_auto, CONDENSE_all, CONDENSE_encoded };
 
 enum option_DURATION_EQ { DURATION_EQ_brevis = 0, DURATION_EQ_semibrevis, DURATION_EQ_minima };
@@ -147,6 +153,7 @@ public:
      * Static maps used my OptionIntMap objects. Set in OptIntMap::Init
      */
     static const std::map<int, std::string> s_breaks;
+    static const std::map<int, std::string> s_uniformMeasureSpacing;
     static const std::map<int, std::string> s_condense;
     static const std::map<int, std::string> s_durationEq;
     static const std::map<int, std::string> s_elision;
@@ -684,6 +691,7 @@ public:
     OptionArray m_svgAdditionalAttribute;
     OptionDbl m_unit;
     OptionBool m_uniformMeasureWidth;
+    OptionIntMap m_uniformMeasureSpacing;
     OptionBool m_useFacsimile;
     OptionBool m_usePgFooterForAll;
     OptionBool m_usePgHeaderForAll;

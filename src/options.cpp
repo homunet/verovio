@@ -26,6 +26,10 @@ namespace vrv {
 const std::map<int, std::string> Option::s_breaks = { { BREAKS_none, "none" }, { BREAKS_auto, "auto" },
     { BREAKS_line, "line" }, { BREAKS_smart, "smart" }, { BREAKS_encoded, "encoded" } };
 
+const std::map<int, std::string> Option::s_uniformMeasureSpacing
+    = { { UNIFORM_SPACING_leftAlign, "leftAlign" }, { UNIFORM_SPACING_scaled, "scaled" },
+          { UNIFORM_SPACING_time, "time" } };
+
 const std::map<int, std::string> Option::s_condense
     = { { CONDENSE_none, "none" }, { CONDENSE_auto, "auto" }, { CONDENSE_encoded, "encoded" } };
 
@@ -1200,6 +1204,17 @@ Options::Options()
         "Incompatible with adjustPageWidth.");
     m_uniformMeasureWidth.Init(false);
     this->Register(&m_uniformMeasureWidth, "uniformMeasureWidth", &m_general);
+
+    m_uniformMeasureSpacing.SetInfo("Uniform measure spacing",
+        "How to distribute content inside uniform-width measures: "
+        "leftAlign keeps natural note positions (content hugs the left); "
+        "scaled stretches Verovio's natural spacing to fill each measure "
+        "(preserves collision avoidance, roughly time-proportional); "
+        "time places each alignment at a position proportional to its time "
+        "within the measure (exactly time-proportional, no collision recovery). "
+        "Only takes effect when uniformMeasureWidth is on.");
+    m_uniformMeasureSpacing.Init(UNIFORM_SPACING_leftAlign, &Option::s_uniformMeasureSpacing);
+    this->Register(&m_uniformMeasureSpacing, "uniformMeasureSpacing", &m_general);
 
     m_unit.SetInfo("Unit", "The MEI unit (1⁄2 of the distance between the staff lines)");
     m_unit.Init(DEFAULT_UNIT, 4.5, 12.0, true);

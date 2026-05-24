@@ -120,6 +120,16 @@ public:
      */
     void ApplyUniformMeasureWidth();
 
+private:
+    /**
+     * Inner helper for ApplyUniformMeasureWidth: rewrite every alignment in
+     * one measure's MeasureAligner so the right barline lands at barlineX,
+     * the right end at targetWidth, and the inner content is distributed per
+     * the given spacing strategy (option_UNIFORM_SPACING).
+     */
+    void RedistributeMeasureAlignments(Measure *m, int spacing, int targetWidth, int barlineX);
+
+public:
     /**
      * Lay out the content of the page (system/staves) vertically.
      */

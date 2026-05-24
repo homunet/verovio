@@ -10,6 +10,7 @@
 //----------------------------------------------------------------------------
 
 #include <cassert>
+#include <cmath>
 
 //----------------------------------------------------------------------------
 
@@ -652,6 +653,7 @@ void Page::ApplyUniformMeasureWidth()
     assert(doc);
     const int targetWidth = doc->m_uniformTargetWidth;
     const int barlineX = doc->m_uniformBarlineXRel;
+    const int spacing = doc->GetOptions()->m_uniformMeasureSpacing.GetValue();
 
     ListOfObjects systems;
     ClassIdsComparison matchSystem({ SYSTEM });
@@ -671,12 +673,81 @@ void Page::ApplyUniformMeasureWidth()
         for (Object *mObj : measures) {
             Measure *m = vrv_cast<Measure *>(mObj);
             assert(m);
-            m->m_measureAligner.GetRightAlignment()->SetXRel(targetWidth);
-            m->m_measureAligner.GetRightBarLineAlignment()->SetXRel(barlineX);
+            this->RedistributeMeasureAlignments(m, spacing, targetWidth, barlineX);
             m->SetDrawingXRel(baseX + i * targetWidth);
             ++i;
         }
     }
+}
+
+void Page::RedistributeMeasureAlignments(Measure *m, int spacing, int targetWidth, int barlineX)
+{
+    MeasureAligner &aligner = m->m_measureAligner;
+    Alignment *rightAlign = aligner.GetRightAlignment();
+    Alignment *rightBar = aligner.GetRightBarLineAlignment();
+    Alignment *leftBar = aligner.GetLeftBarLineAlignment();
+    assert(rightAlign && rightBar);
+
+    // Anchor the inner range to the left barline if present; otherwise to 0.
+    const int leftAnchorX = leftBar ? leftBar->GetXRel() : 0;
+    const int naturalRightX = rightAlign->GetXRel();
+    const int naturalRightBarX = rightBar->GetXRel();
+
+    // The new gap between rightBarLine and rightEnd (typically a few units for
+    // post-barline scoreDef/caution elements). Preserved across all strategies.
+    const int rightTailShift = naturalRightX - naturalRightBarX;
+
+    // For "scaled": ratio that stretches naturalInnerWidth → targetInnerWidth.
+    const int targetInnerWidth = barlineX - leftAnchorX;
+    const int naturalInnerWidth = naturalRightBarX - leftAnchorX;
+    const double scaleRatio = (naturalInnerWidth > 0 && targetInnerWidth > 0)
+        ? (double)targetInnerWidth / (double)naturalInnerWidth
+        : 1.0;
+
+    // For "time": measure max time (right barline time).
+    const double maxTime = aligner.GetMaxTime().ToDouble();
+
+    for (Object *child : aligner.GetChildren()) {
+        Alignment *a = vrv_cast<Alignment *>(child);
+        if (!a) continue;
+        const AlignmentType type = a->GetType();
+
+        // System-prefix (scoreDef on first measure of system) and the left
+        // barline itself stay put — they're positioned by other passes.
+        if (type <= ALIGNMENT_MEASURE_LEFT_BARLINE) continue;
+
+        if (type == ALIGNMENT_MEASURE_RIGHT_BARLINE) {
+            a->SetXRel(barlineX);
+            continue;
+        }
+        if (type > ALIGNMENT_MEASURE_RIGHT_BARLINE) {
+            // Caution scoreDef / measure-end: shift to keep the same offset
+            // past the new right barline. rightAlign (MEASURE_END) ends up at
+            // barlineX + rightTailShift, which should equal targetWidth.
+            const int oldShift = a->GetXRel() - naturalRightBarX;
+            a->SetXRel(barlineX + oldShift);
+            continue;
+        }
+
+        // Inner alignment (between left and right barlines): apply strategy.
+        if (spacing == UNIFORM_SPACING_scaled) {
+            const int newX = leftAnchorX + (int)std::lround((a->GetXRel() - leftAnchorX) * scaleRatio);
+            a->SetXRel(newX);
+        }
+        else if (spacing == UNIFORM_SPACING_time) {
+            if (maxTime > 0.0) {
+                const double t = a->GetTime().ToDouble();
+                const int newX = leftAnchorX + (int)std::lround((t / maxTime) * targetInnerWidth);
+                a->SetXRel(newX);
+            }
+        }
+        // else UNIFORM_SPACING_leftAlign: leave inner alignment at its natural position.
+    }
+
+    // Belt-and-suspenders: force the right edge to exactly targetWidth (in case
+    // rounding in the caution-tail shift drifts by 1 unit).
+    rightAlign->SetXRel(targetWidth);
+    (void)rightTailShift;
 }
 
 void Page::JustifyVertically()

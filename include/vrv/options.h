@@ -683,6 +683,7 @@ public:
     OptionBool m_svgRemoveXlink;
     OptionArray m_svgAdditionalAttribute;
     OptionDbl m_unit;
+    OptionBool m_uniformMeasureWidth;
     OptionBool m_useFacsimile;
     OptionBool m_usePgFooterForAll;
     OptionBool m_usePgHeaderForAll;

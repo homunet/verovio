@@ -112,6 +112,15 @@ public:
     void JustifyHorizontally();
 
     /**
+     * Re-apply uniform measure widths after LayOutHorizontally has recomputed
+     * natural positions. Used in place of JustifyHorizontally when the
+     * uniformMeasureWidth option is on. Reads Doc::m_uniformTargetWidth /
+     * m_uniformBarlineXRel that were stored by Doc::PrepareUniformMeasureWidth
+     * during cast-off.
+     */
+    void ApplyUniformMeasureWidth();
+
+    /**
      * Lay out the content of the page (system/staves) vertically.
      */
     void LayOutVertically();

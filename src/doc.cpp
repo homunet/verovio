@@ -27,6 +27,7 @@
 #include "facsimilefunctor.h"
 #include "featureextractor.h"
 #include "functor.h"
+#include "horizontalaligner.h"
 #include "glyph.h"
 #include "instrdef.h"
 #include "iomei.h"
@@ -1081,6 +1082,23 @@ void Doc::CastOffDocBase(bool useSb, bool usePb, bool smart)
         unCastOffPage->LayOutHorizontallyWithCache(true);
     }
 
+    // Uniform measure width: override every measure's width and position so the
+    // following CastOffSystemsFunctor distributes them evenly. Skipped for
+    // encoded / none breaks because those paths use CastOffEncodingFunctor (or
+    // no cast-off at all) and shouldn't be forced into auto-distribution.
+    const auto breaksMode = m_options->m_breaks.GetValue();
+    if (m_options->m_uniformMeasureWidth.GetValue()
+        && breaksMode != BREAKS_encoded && breaksMode != BREAKS_none) {
+        this->PrepareUniformMeasureWidth(unCastOffPage);
+        // Re-cache so CastOffSystemsFunctor reads the overridden widths via
+        // GetCachedWidth() and the new drawingXRel via GetCachedXRel().
+        unCastOffPage->LayOutHorizontallyWithCache();
+    }
+    else {
+        m_uniformTargetWidth = 0;
+        m_uniformBarlineXRel = 0;
+    }
+
     Page *castOffSinglePage = new Page();
 
     System *leftoverSystem = NULL;
@@ -1154,6 +1172,69 @@ void Doc::CastOffDocBase(bool useSb, bool usePb, bool smart)
     }
 
     m_isCastOff = true;
+}
+
+void Doc::PrepareUniformMeasureWidth(Page *page)
+{
+    assert(page);
+
+    ListOfObjects measures;
+    ClassIdsComparison matchMeasure({ MEASURE });
+    page->FindAllDescendantsByComparison(&measures, &matchMeasure);
+
+    if (measures.empty()) {
+        m_uniformTargetWidth = 0;
+        m_uniformBarlineXRel = 0;
+        return;
+    }
+
+    // Pass 1: widest natural measure and its barline offset within that measure.
+    int maxWidth = 0;
+    int widestBarlineX = 0;
+    for (Object *obj : measures) {
+        Measure *m = vrv_cast<Measure *>(obj);
+        assert(m);
+        const int w = m->GetWidth();
+        if (w > maxWidth) {
+            maxWidth = w;
+            widestBarlineX = m->m_measureAligner.GetRightBarLineAlignment()->GetXRel();
+        }
+    }
+    if (maxWidth <= 0) {
+        m_uniformTargetWidth = 0;
+        m_uniformBarlineXRel = 0;
+        return;
+    }
+
+    // Budget = page content width minus scoreDef and system margins. System margins
+    // default to 0 but a non-zero value would otherwise push the last measure into
+    // the margin at draw time.
+    const int scoreDefWidth = page->m_drawingScoreDef.GetDrawingWidth();
+    System *firstSystem = vrv_cast<System *>(page->FindDescendantByType(SYSTEM));
+    const int leftMar = firstSystem ? firstSystem->m_systemLeftMar : 0;
+    const int rightMar = firstSystem ? firstSystem->m_systemRightMar : 0;
+
+    int available = m_drawingPageContentWidth - scoreDefWidth - leftMar - rightMar;
+    if (available < 1) available = 1;
+    int measuresPerSystem = available / maxWidth;
+    if (measuresPerSystem < 1) measuresPerSystem = 1;
+
+    // Use available (not pageContentWidth) so CastOffSystemsFunctor's overflow
+    // check (drawingXRel + width + scoreDefWidth > systemWidth) fits exactly.
+    m_uniformTargetWidth = available / measuresPerSystem;
+    m_uniformBarlineXRel = (m_uniformTargetWidth * widestBarlineX) / maxWidth;
+
+    // Pass 2: override alignments and positions on the uncast-off page so the
+    // following cache-and-cast-off pass distributes measures evenly.
+    int x = 0;
+    for (Object *obj : measures) {
+        Measure *m = vrv_cast<Measure *>(obj);
+        assert(m);
+        m->m_measureAligner.GetRightAlignment()->SetXRel(m_uniformTargetWidth);
+        m->m_measureAligner.GetRightBarLineAlignment()->SetXRel(m_uniformBarlineXRel);
+        m->SetDrawingXRel(x);
+        x += m_uniformTargetWidth;
+    }
 }
 
 void Doc::UnCastOffDoc(bool resetCache)

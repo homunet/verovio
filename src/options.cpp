@@ -1195,6 +1195,12 @@ Options::Options()
     m_svgAdditionalAttribute.Init();
     this->Register(&m_svgAdditionalAttribute, "svgAdditionalAttribute", &m_general);
 
+    m_uniformMeasureWidth.SetInfo("Uniform measure width",
+        "Make all measures the same width, sized to the widest measure. "
+        "Incompatible with adjustPageWidth.");
+    m_uniformMeasureWidth.Init(false);
+    this->Register(&m_uniformMeasureWidth, "uniformMeasureWidth", &m_general);
+
     m_unit.SetInfo("Unit", "The MEI unit (1⁄2 of the distance between the staff lines)");
     m_unit.Init(DEFAULT_UNIT, 4.5, 12.0, true);
     this->Register(&m_unit, "unit", &m_general);

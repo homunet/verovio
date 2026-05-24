@@ -52,6 +52,8 @@
 #include "calcstemfunctor.h"
 #include "comparison.h"
 #include "doc.h"
+#include "horizontalaligner.h"
+#include "measure.h"
 #include "functor.h"
 #include "justifyfunctor.h"
 #include "libmei.h"
@@ -227,13 +229,25 @@ void Page::LayOut()
         return;
     }
 
+    Doc *doc = vrv_cast<Doc *>(this->GetFirstAncestor(DOC));
+    assert(doc);
+
     this->LayOutHorizontally();
-    this->JustifyHorizontally();
+
+    if (doc->GetOptions()->m_uniformMeasureWidth.GetValue() && doc->m_uniformTargetWidth > 0) {
+        // adjustPageWidth + uniformMeasureWidth are mutually exclusive: shrinking the
+        // page to fit natural content defeats the purpose of forced uniform widths.
+        // Option registration rejects the combination; assert defensively.
+        assert(!doc->GetOptions()->m_adjustPageWidth.GetValue());
+        this->ApplyUniformMeasureWidth();
+    }
+    else {
+        this->JustifyHorizontally();
+    }
+
     this->LayOutVertically();
     this->JustifyVertically();
 
-    Doc *doc = vrv_cast<Doc *>(this->GetFirstAncestor(DOC));
-    assert(doc);
     if (doc->GetOptions()->m_svgBoundingBoxes.GetValue()) {
         View view;
         view.SetDoc(doc);
@@ -629,6 +643,39 @@ void Page::JustifyHorizontally()
         JustifyXFunctor justifyX(doc);
         justifyX.SetSystemFullWidth(doc->m_drawingPageContentWidth);
         this->Process(justifyX);
+    }
+}
+
+void Page::ApplyUniformMeasureWidth()
+{
+    Doc *doc = vrv_cast<Doc *>(this->GetFirstAncestor(DOC));
+    assert(doc);
+    const int targetWidth = doc->m_uniformTargetWidth;
+    const int barlineX = doc->m_uniformBarlineXRel;
+
+    ListOfObjects systems;
+    ClassIdsComparison matchSystem({ SYSTEM });
+    this->FindAllDescendantsByComparison(&systems, &matchSystem);
+
+    for (Object *sysObj : systems) {
+        ListOfObjects measures;
+        ClassIdsComparison matchMeasure({ MEASURE });
+        sysObj->FindAllDescendantsByComparison(&measures, &matchMeasure);
+        if (measures.empty()) continue;
+
+        // Keep first measure's drawingXRel (includes per-system scoreDef/label offset
+        // set by AlignMeasuresFunctor::VisitSystem).
+        const int baseX = vrv_cast<Measure *>(measures.front())->GetDrawingXRel();
+
+        int i = 0;
+        for (Object *mObj : measures) {
+            Measure *m = vrv_cast<Measure *>(mObj);
+            assert(m);
+            m->m_measureAligner.GetRightAlignment()->SetXRel(targetWidth);
+            m->m_measureAligner.GetRightBarLineAlignment()->SetXRel(barlineX);
+            m->SetDrawingXRel(baseX + i * targetWidth);
+            ++i;
+        }
     }
 }
 

@@ -357,6 +357,15 @@ public:
     void CastOffDocBase(bool useSb, bool usePb, bool smart = false);
 
     /**
+     * Compute uniform measure width parameters from the widest measure on the
+     * given (uncast-off) page and override each measure's right alignment,
+     * right barline alignment, and drawingXRel so that CastOffSystemsFunctor
+     * sees uniform widths. Stores results in m_uniformTargetWidth and
+     * m_uniformBarlineXRel for later re-application during page layout.
+     */
+    void PrepareUniformMeasureWidth(Page *page);
+
+    /**
      * Undo the cast off of the entire document.
      * The document will then contain one single page with one single system.
      */
@@ -617,6 +626,13 @@ public:
     int m_drawingPageContentHeight;
     /** The current page content width (without margins) */
     int m_drawingPageContentWidth;
+    /**
+     * Uniform measure layout cache, populated by PrepareUniformMeasureWidth
+     * during cast-off and consumed by Page::ApplyUniformMeasureWidth during
+     * per-page layout. Zero means uniform mode is off / not yet computed.
+     */
+    int m_uniformTargetWidth = 0;
+    int m_uniformBarlineXRel = 0;
     /** The current page bottom margin */
     int m_drawingPageMarginBottom;
     /** The current page left margin */

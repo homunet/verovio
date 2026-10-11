@@ -47,6 +47,9 @@
 #include "verse.h"
 #include "vrv.h"
 
+#include <map>
+#include <vector>
+
 //----------------------------------------------------------------------------
 
 namespace vrv {
@@ -938,27 +941,28 @@ PreparePedalsFunctor::PreparePedalsFunctor(Doc *doc) : DocFunctor(doc) {}
 
 FunctorCode PreparePedalsFunctor::VisitMeasureEnd(Measure *measure)
 {
-    // Match down and up pedal lines
-    using PedalIter = std::list<Pedal *>::iterator;
-    PedalIter iter = m_pedalLines.begin();
-    while (iter != m_pedalLines.end()) {
-        if ((*iter)->GetDir() != pedalLog_DIR_down) {
-            ++iter;
+    // Match pedal spans in document order: each down starts a span, the next up or bounce on
+    // the same staff ends it. A bounce releases and immediately re-presses, so it also begins
+    // the next span — without this, a down + bounces + up chain (the standard MusicXML
+    // start/change/stop encoding of a continuous pedal line) draws only its first segment.
+    // Marks are revisited on later calls (nothing is erased), so re-pairing must be
+    // idempotent: SetEnd and EndsWithBounce write the same values again.
+    std::map<std::vector<int>, Pedal *> starts;
+    for (std::list<Pedal *>::iterator iter = m_pedalLines.begin(); iter != m_pedalLines.end(); ++iter) {
+        Pedal *pedal = *iter;
+        if (pedal->GetDir() == pedalLog_DIR_down) {
+            starts[pedal->GetStaff()] = pedal;
             continue;
         }
-        PedalIter up = std::find_if(m_pedalLines.begin(), m_pedalLines.end(), [&iter](Pedal *pedal) {
-            return (((*iter)->GetStaff() == pedal->GetStaff()) && (pedal->GetDir() != pedalLog_DIR_down));
-        });
-        if (up != m_pedalLines.end()) {
-            (*iter)->SetEnd((*up)->GetStart());
-            if ((*up)->GetDir() == pedalLog_DIR_bounce) {
-                (*iter)->EndsWithBounce(true);
-            }
-            m_pedalLines.erase(up);
-            iter = m_pedalLines.erase(iter);
+        Pedal *start = starts[pedal->GetStaff()];
+        if (!start) continue;
+        start->SetEnd(pedal->GetStart());
+        if (pedal->GetDir() == pedalLog_DIR_bounce) {
+            start->EndsWithBounce(true);
+            starts[pedal->GetStaff()] = pedal;
         }
         else {
-            ++iter;
+            starts[pedal->GetStaff()] = NULL;
         }
     }
 

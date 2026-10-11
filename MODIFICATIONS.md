@@ -85,6 +85,23 @@ Behaviour for every encoding that existed before the change is identical; only f
 
 The SightPiano score library unifies every pedal mark to `start line="yes" sign="yes"` / `stop line="yes" sign="no"` (plan v6 §8, `pedal-style` normalizer rule), so the app renders one consistent modern pedal notation. The change is intended to be contributed upstream to `rism-digital/verovio`.
 
+## Chain pedal bounces into a continuous line
+
+### Purpose
+
+`PreparePedalsFunctor::VisitMeasureEnd` matched each pedal `down` with the *first* non-`down` mark anywhere in the list and then erased both. A `bounce` (MusicXML `type="change"`) therefore only ever **ended** a span — it could not begin the next one — so a `down` + `bounce`s + `up` chain drew only its first segment and every later change rendered as nothing. That is the standard MusicXML encoding of a continuous pedal line with legato changes (what MuseScore itself writes for a pedal line entered with change marks), and it degraded to a single short segment.
+
+The position-independent `find_if` could also pair a mark with a non-`down` appearing *before* it, producing negative-time spans that Verovio then ignores with a warning.
+
+### Implementation
+
+**Files modified:**
+
+- `src/preparedatafunctor.cpp` (`PreparePedalsFunctor::VisitMeasureEnd`)
+  - Single forward pass in document order; a `down` starts a span per staff, the next `up` or `bounce` on that staff ends it
+  - A `bounce` ends the current span **and** becomes the start of the next, chaining `down + bounce…bounce + up` into one continuous line with notch endings
+  - Pairing is strictly forward (no backward spans); marks are not erased, and re-pairing across the per-measure calls is idempotent (`SetEnd` / `EndsWithBounce` rewrite the same values)
+
 ## License
 
 All modifications are released under the same **LGPL-3.0** license as the upstream Verovio project. The original Verovio copyright and license notices are preserved in `COPYING` at the root of this repository.

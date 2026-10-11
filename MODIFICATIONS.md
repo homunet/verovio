@@ -63,6 +63,32 @@ git diff 1d164d253fcca8a7c80a8912fd98205057cc0874..probe/uniform-width-probe
 
 This modification is released under the same **LGPL-3.0** license as the upstream Verovio project. The original Verovio copyright and license notices are preserved in `COPYING` at the root of this repository.
 
+## MusicXML pedal `sign` attribute (branch `pedal-sign-import`)
+
+### Purpose
+
+The MusicXML 4.0 specification makes the `<pedal>` attributes `line` and `sign` independent and combinable: *"The line attribute is yes if pedal lines are used. The sign attribute is yes if Ped, Sost, and \* signs are used. For compatibility with older versions, the sign attribute is yes by default if the line attribute is no, and is no by default if the line attribute is yes."*
+
+Upstream Verovio's MusicXML importer reads only `line`: `line="yes"` always maps to `PEDALSTYLE_line`, a form whose renderer draws **no symbol at all** (`View::DrawPedal`: `drawSymbol = (form != PEDALSTYLE_line)`). As a result the spec combination `line="yes" sign="yes"` — the modern engraved pedal notation of the `Ped.` sign joined to a bracketed line ending in an upward release hook (`PEDALSTYLE_pedline`, fully implemented in the MEI/render layer but otherwise unreachable from MusicXML) — cannot be rendered, and spec-conformant files degrade to symbol-less bracket lines.
+
+### Implementation
+
+**Files modified:**
+
+- `src/iomusxml.cpp` (MusicXML pedal import)
+  - Read the `sign` attribute with the spec default: `sign` defaults to **no** when `line` is yes, **yes** otherwise — `xmlPedal.attribute("sign").as_bool(!pedalLine)`
+  - Map `line="yes"` + `sign="yes"` to `PEDALSTYLE_pedline` (Ped. sign + line + upward release hook); `line="yes"` + `sign="no"` keeps `PEDALSTYLE_line`; `line` absent keeps the previous symbol behaviour unchanged
+
+Behaviour for every encoding that existed before the change is identical; only files that explicitly opt into `sign="yes"` render differently.
+
+### Integration in SightPiano
+
+The SightPiano score library unifies every pedal mark to `start line="yes" sign="yes"` / `stop line="yes" sign="no"` (plan v6 §8, `pedal-style` normalizer rule), so the app renders one consistent modern pedal notation. The change is intended to be contributed upstream to `rism-digital/verovio`.
+
+## License
+
+All modifications are released under the same **LGPL-3.0** license as the upstream Verovio project. The original Verovio copyright and license notices are preserved in `COPYING` at the root of this repository.
+
 ## Build
 
 To build the WASM module including these modifications:

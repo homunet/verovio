@@ -2652,13 +2652,15 @@ void MusicXmlInput::ReadMusicXmlDirection(
     if (xmlPedal) {
         std::string pedalType = xmlPedal.attribute("type").as_string();
         bool pedalLine = xmlPedal.attribute("line").as_bool();
+        // MusicXML: sign is independent of line; it defaults to no when line is yes and to yes otherwise
+        bool pedalSign = xmlPedal.attribute("sign").as_bool(!pedalLine);
         if (pedalType != "continue") {
             Pedal *pedal = new Pedal();
             pedal->SetColor(xmlPedal.attribute("color").as_string());
             // pedal->SetN(xmlPedal.attribute("number").as_string());
             if (!placeStr.empty()) pedal->SetPlace(pedal->AttPlacementRelStaff::StrToStaffrel(placeStr.c_str()));
             pedal->SetDir(ConvertPedalTypeToDir(pedalType));
-            if (pedalLine) pedal->SetForm(PEDALSTYLE_line);
+            if (pedalLine) pedal->SetForm(pedalSign ? PEDALSTYLE_pedline : PEDALSTYLE_line);
             if (xmlPedal.attribute("abbreviated")) {
                 pedal->SetGlyphAuth("smufl");
                 AttModule::SetExternalsymbols(pedal, "glyph.num", "U+E651");
